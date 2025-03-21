@@ -1,82 +1,78 @@
 import Coupon from "../model/coupon.model.js";
 import { stripe } from "../lib/stripe.js"; 
 import Order from "../model/order.model.js"; 
-
+ 
 export const createCheckoutSession = async (req, res) => {
-  try {
-    const { products, couponCode } = req.body;
-    // 1. user should be sending us the products and the coupon...
-    if (!Array.isArray(products) || products.length === 0) {
-      res.status(400).json({ error: "Please provide a valid products array." });
-    }
+	try {
+		const { products, couponCode } = req.body;
 
-    //2.  calc price of all products in the product array...
-    let totalAmt = 0;
-    const lineItems = products.map((product) => {
-      const amt = Math.round(product.price * 100); // do this cause the stripe wants shit in the Cents format so: $1 * 100 = 100cents.
-      totalAmt += amt * product.quantity;
+		if (!Array.isArray(products) || products.length === 0) {
+			return res.status(400).json({ error: "Invalid or empty products array" });
+		}
 
-      return {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: product.name,
-            image: product.image,
-          },
-          unit_amount: amt,
-        },
-      };
-    });
+		let totalAmount = 0;
 
-    // 3. if coupon is given, check if it is valid and recalc the totalAMT:
-    let coupon = null;
-    if (couponCode) {
-      // if user has a Coupon Code :
-      coupon = await Coupon.findOne({
-        code: couponCode,
-        usedId: res.user._id,
-        isActive: true,
-      });
-      if (coupon) {
-        totalAmt -= Math.round(totalAmt * (coupon.discountPercentage / 100)); // -ve the percentage of offer the user will have...
-      }
-    }
+		const lineItems = products.map((product) => {
+			const amount = Math.round(product.price * 100); // stripe wants u to send in the format of cents
+			totalAmount += amount * product.quantity;
 
-    // Finally lets make a session :
-    // -----------------------------------------------------------------------------
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: lineItems,
-      mode: "payment", // one time payment
-      success_url: `${process.env.CLIENT_URL}/purchase_success?session_id={CHECKOUT_SESSION_ID}`, // if sucess is there so this....
-      cancel_url: `${process.env.CLIENT_URL}/purchase_cancel`, // if sucess is there so this.... make thy page
-      discounts: coupon
-        ? [{ coupon: await createStripeCoupon(coupon.discountPercentage) }]
-        : [],
-      metadata: {
-        userId: res.user._id.toString(),
-        couponCode: couponCode || null,
-        products: JSON.stringify(
-          products.map((p) => ({
-            id: p._id,
-            quantity: p.quantity,
-            name: p.name,
-            price: p.price,
-          }))
-        ),
-      },
-    });
+			return {
+				price_data: {
+					currency: "usd",
+					product_data: {
+						name: product.name,
+						images: [product.image],
+					},
+					unit_amount: amount,
+				},
+				quantity: product.quantity || 1,
+			};
+		});
 
-    if (totalAmt >= 20000) {
-      // if 200$ worth of shit is purchased...
-      await createNewCoupon(res.user._id);
-    }
-    res.status(200).json({ sessionId: session.id, totalAmt: totalAmt / 100 }); // div by 100 cause of dollers...
-  } catch (error) {
-    console.log("Unable to create session... ");
-    res.status(500).json({ error: error.message });
-  }
+		let coupon = null;
+		if (couponCode) {
+			coupon = await Coupon.findOne({ code: couponCode, userId: req.user._id, isActive: true });
+			if (coupon) {
+				totalAmount -= Math.round((totalAmount * coupon.discountPercentage) / 100);
+			}
+		}
+
+		const session = await stripe.checkout.sessions.create({
+			payment_method_types: ["card"],
+			line_items: lineItems,
+			mode: "payment",
+			success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`,
+			cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`,
+			discounts: coupon
+				? [
+						{
+							coupon: await createStripeCoupon(coupon.discountPercentage),
+						},
+				  ]
+				: [],
+			metadata: {
+				userId: req.user._id.toString(),
+				couponCode: couponCode || "",
+				products: JSON.stringify(
+					products.map((p) => ({
+						id: p._id,
+						quantity: p.quantity,
+						price: p.price,
+					}))
+				),
+			},
+		});
+
+		if (totalAmount >= 20000) {
+			await createNewCoupon(req.user._id);
+		}
+		res.status(200).json({ id: session.id, totalAmount: totalAmount / 100 });
+	} catch (error) {
+		console.error("Error processing checkout:", error);
+		res.status(500).json({ message: "Error processing checkout", error: error.message });
+	}
 };
+
 export const checkoutSuccess = async (req, res) => {
   try {
     const { sessionId } = req.body;

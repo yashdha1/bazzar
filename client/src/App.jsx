@@ -10,6 +10,8 @@ import HomePage from "./pages/HomePage";
 import AdminPage from "./pages/AdminPage";
 import CategoryPage from "./pages/CategoryPage";
 import CartPage from "./pages/CartPage"; 
+import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
+
 
 import Navbar from "./components/Navbar";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -67,6 +69,10 @@ function App() {
             path="/cart"
             element={user ? <CartPage /> : <Navigate to="/login" />}
           />
+          <Route 
+             path = "/purchase-success"
+             element={user  ? <PurchaseSuccessPage /> : <Navigate to="/login" />}
+           />
         </Routes>
       </div>
       <Toaster />

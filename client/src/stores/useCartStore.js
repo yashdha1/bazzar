@@ -35,6 +35,7 @@ export const useCartStore = create((set, get) => ({
   getCartItems: async () => {
     try {
       const res = await axios.get("/cart");
+      console.log( "prods" ,  res.data); 
       set({ cart: res.data });
       get().calculateTotals();
     } catch (error) {
@@ -102,7 +103,7 @@ export const useCartStore = create((set, get) => ({
           item._id === productId ? { ...item, quantity } : item
         ),
       }));
-      get().calculateTotals();
+      get().calculateTotals() ;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update quantity");
     }

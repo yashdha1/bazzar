@@ -9,7 +9,7 @@ import GiftCouponCard from "../components/GiftCouponCard";
 
 const CartPage = () => {
 	const { cart } = useCartStore();
-    console.log(cart); 
+    console.log("from the page :" , cart.length, cart); 
 	return (
 		<div className='py-8 md:py-16'>
 			<div className='mx-auto max-w-screen-xl px-4 2xl:px-0'>
@@ -20,7 +20,7 @@ const CartPage = () => {
 						{cart.length === 0 ? (
 							<EmptyCartUI />
 						) : (
-							<div className='space-y-6'>
+							<div className='space-y-6'> {/* if the cart is not empty load thy shit...  */}
 								{cart.map((item) => (
 									<CartItem key={item._id} item={item} />
 								))}
@@ -29,7 +29,7 @@ const CartPage = () => {
 						{cart.length > 0 && <PeopleAlsoBought />}
 					</div>
 
-					{/* {cart.length > 0 && (
+					{cart.length > 0 && (
 						<motion.div
 							className='mx-auto mt-6 max-w-4xl flex-1 space-y-6 lg:mt-0 lg:w-full'
 							initial={{ opacity: 0, x: 20 }}
@@ -39,7 +39,8 @@ const CartPage = () => {
 							<OrderSummary />
 							<GiftCouponCard />
 						</motion.div>
-					)} */}
+					)}
+
 				</div>
 			</div>
 		</div>

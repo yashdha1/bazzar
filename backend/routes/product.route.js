@@ -16,7 +16,7 @@ const router = express.Router();
 router.get("/", protectedRoute, adminRoute, getProducts);
 router.get("/featured", getfeaturedProducts);
 router.get("/category/:category", getProductsByCategory);
-router.get("/recommend", getRecommendedProducts);
+router.get("/recommendations", getRecommendedProducts);
 router.post("/", protectedRoute, adminRoute, createProduct);
 router.put("/:_id", protectedRoute, adminRoute, toggleFeaturedProduct);
 router.delete("/:_id", protectedRoute, adminRoute, deleteProduct);
